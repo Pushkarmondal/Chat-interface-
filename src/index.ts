@@ -1,7 +1,7 @@
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import { getEnv } from "@/config/env";
-import { getPrisma } from "@/data/prisma";
+import { prisma } from "@/data/repositories/prismaConnection";
 import { getRedis } from "@/data/redis.client";
 import { createPubSubConnections } from "@/data/redis.pubsub";
 import { ChatMemberRepository } from "@/data/repositories/chat-member.repository";
@@ -45,7 +45,7 @@ function buildApp() {
   return { gateway, redisSub, publisher, subscriber };
 }
 
-const { gateway, redisSub, publisher, subscriber } = buildApp();
+const { gateway, redisSub, publisher } = buildApp();
 
 const server = createServer((req, res) => {
   if (req.url === "/health" || req.url === "/healthz") {
@@ -77,7 +77,7 @@ function shutdown(signal: string): void {
     wss.close(() => {
       server.close(() => {
         void Promise.all([
-          getPrisma().$disconnect(),
+          prisma.$disconnect(),
           publisher.quit(),
           getRedis().quit(),
         ]).finally(() => process.exit(0));

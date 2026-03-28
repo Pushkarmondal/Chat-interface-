@@ -12,7 +12,6 @@ const envSchema = z.object({
   MOCK_S3_BUCKET_BASE_URL: z.string().url().default("https://mock-cdn.example.com/uploads"),
 });
 
-export type Env = z.infer<typeof envSchema>;
 
 let cached: Env | null = null;
 
@@ -26,3 +25,5 @@ export function getEnv(): Env {
   cached = parsed.data;
   return cached;
 }
+
+export type Env = z.infer<typeof envSchema>;

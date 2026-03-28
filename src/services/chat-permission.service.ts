@@ -1,6 +1,6 @@
-import type { GroupRole } from "@prisma/client";
-import { AppError } from "@/lib/errors";
-import { ChatMemberRepository } from "@/data/repositories/chat-member.repository";
+import type { GroupRole } from "../../generated/prisma/client";
+import { AppError } from "../lib/errors";
+import { ChatMemberRepository } from "../data/repositories/chat-member.repository";
 
 /**
  * Authorization lives exclusively in the service layer so transports (HTTP, WS, gRPC)

@@ -1,12 +1,12 @@
-import { Prisma, type Message, type MessageType } from "@prisma/client";
-import { getPrisma } from "@/data/prisma";
+import { Prisma, type Message, type MessageType } from "../../../generated/prisma/client";
+import { prisma } from "../repositories/prismaConnection";
 
 export class MessageRepository {
   async findByClientGeneratedId(
     chatId: string,
     clientGeneratedId: string
   ): Promise<Message | null> {
-    return getPrisma().message.findUnique({
+    return prisma.message.findUnique({
       where: {
         chatId_clientGeneratedId: { chatId, clientGeneratedId },
       },
@@ -21,7 +21,7 @@ export class MessageRepository {
     metadata: Prisma.InputJsonValue;
     clientGeneratedId: string;
   }): Promise<Message> {
-    return getPrisma().message.create({ data });
+    return prisma.message.create({ data });
   }
 
   async createManyReadReceipts(
@@ -30,14 +30,14 @@ export class MessageRepository {
   ): Promise<{ count: number }> {
     if (messageIds.length === 0) return { count: 0 };
     const data = messageIds.map((messageId) => ({ messageId, userId }));
-    return getPrisma().messageReadReceipt.createMany({
+    return prisma.messageReadReceipt.createMany({
       data,
       skipDuplicates: true,
     });
   }
 
   async assertMessagesBelongToChat(messageIds: string[], chatId: string): Promise<boolean> {
-    const count = await getPrisma().message.count({
+    const count = await prisma.message.count({
       where: { chatId, id: { in: messageIds } },
     });
     return count === messageIds.length;
