@@ -31,6 +31,16 @@ Typing, presence, and read receipts follow the same **publish → subscribe → 
 | `src/services/` | Permissions, messages, typing, presence, media URLs |
 | `src/data/` | Prisma repos, Redis command + Pub/Sub clients |
 
+### Diagrams (Excalidraw)
+
+**Diagram A — system context** (client, load balancer, chat server pool, PostgreSQL, Redis, S3 + pre-signed upload path):
+
+![Diagram A — system context](./chatinternals.png)
+
+**Diagram B — single chat server (internal)** (components and data flow inside one node):
+
+![Diagram B — single chat server internal](./highleveldesign.png)
+
 ---
 
 ## Scaling
