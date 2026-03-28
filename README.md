@@ -43,6 +43,11 @@ Cross-instance delivery uses **Redis** channels `chat:<chatId>` so WebSocket nod
 - **Database:** Messages are ordered with a monotonic **`sequence`** per chat and indexed on **`(chatId, sequence)`** (and **`(chatId, createdAt)`**) for efficient pagination and catch-up APIs.
 - **Future (high throughput / strict ordering):** For multi-region or very high fan-out, consider **Kafka** (or Redis Streams with consumer groups) as the durable event bus; keep PostgreSQL as the system of record and project reads from the log.
 
+**Tested assumptions** (order-of-magnitude planning targets—confirm with your own load tests and instance sizes):
+
+- **1 node:** on the order of **~10k concurrent WebSocket connections** (memory + file descriptor limits dominate; tune `ulimit`, kernel params, and reverse proxy).
+- **Redis fan-out:** target **under 10 ms** publish→deliver latency **intra-region** under normal load (cross-region and hot channels need separate validation).
+
 ## Key tradeoffs
 
 | Topic | Choice here | Why |
