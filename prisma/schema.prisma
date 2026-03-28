@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+//
+
+enum GroupRole {
+  ADMIN
+  WRITE
+  READ
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  FILE
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+}
+
+//
+// MODELS
+//
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  memberships      ChatMember[]
+  messages         Message[]
+  readReceipts     MessageReadReceipt[]
+
+  @@map("users")
+}
+
+model Chat {
+  id        String   @id @default(uuid()) @db.Uuid
+  type      ChatType
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  members  ChatMember[]
+  messages Message[]
+
+  @@index([type])
+  @@map("chats")
+}
+
+model ChatMember {
+  userId String    @map("user_id") @db.Uuid
+  chatId String    @map("chat_id") @db.Uuid
+  role   GroupRole
+
+  // scalable read tracking (instead of per-message explosion)
+  lastReadMessageId String? @map("last_read_message_id") @db.Uuid
+
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@id([userId, chatId])
+  @@index([chatId])
+  @@index([userId])
+  @@map("chat_members")
+}
+
+model Message {
+  id        String      @id @default(uuid()) @db.Uuid
+  chatId    String      @map("chat_id") @db.Uuid
+  senderId  String      @map("sender_id") @db.Uuid
+
+  type      MessageType
+  content   String      @db.Text
+  metadata  Json        @default("{}")
+
+  // REQUIRED for idempotency (no duplicates on retries)
+  clientGeneratedId String @map("client_generated_id") @db.VarChar(128)
+
+  // ordering guarantee (critical for pagination + consistency)
+  sequence  BigInt      @default(autoincrement())
+
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime?   @map("updated_at")
+  deletedAt DateTime?   @map("deleted_at")
+
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // optional (kept for small groups / audit)
+  reads  MessageReadReceipt[]
+
+  @@unique([chatId, clientGeneratedId])
+  @@unique([chatId, sequence])
+  @@index([chatId, sequence])
+  @@index([chatId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model MessageReadReceipt {
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  readAt    DateTime @default(now()) @map("read_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+  @@index([userId, readAt])
+  @@map("message_read_receipts")
+}

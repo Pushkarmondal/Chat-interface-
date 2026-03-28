@@ -1,0 +1,37 @@
+{
+  "name": "flow-chat-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "bun run prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.6.0",
+    "@prisma/client": "^7.6.0",
+    "dotenv": "^16.4.7",
+    "ioredis": "^5.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.20.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1",
+    "zod": "^3.24.2"
+  },
+  "prisma": {
+    "seed": "bun run prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.13.10",
+    "@types/pg": "^8.20.0",
+    "@types/ws": "^8.18.0",
+    "prisma": "^7.6.0",
+    "typescript": "^5.8.2"
+  }
+}
