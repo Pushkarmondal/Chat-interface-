@@ -33,13 +33,14 @@ Typing, presence, and read receipts follow the same **publish → subscribe → 
 
 ### Diagrams (Excalidraw)
 
-**Diagram A — system context** (client, load balancer, chat server pool, PostgreSQL, Redis, S3 + pre-signed upload path):
+<!-- **Diagram A — system context** (client, load balancer, chat server pool, PostgreSQL, Redis, S3 + pre-signed upload path): -->
+**Diagram A — single chat server (internal)** (components and data flow inside one node):
 
-![Diagram A — system context](./chatinternals.png)
+![Diagram A — single chat server (internal)](./chatinternals.png)
 
-**Diagram B — single chat server (internal)** (components and data flow inside one node):
+**Diagram B — system context** (client, load balancer, chat server pool, PostgreSQL, Redis, S3 + pre-signed upload path):
 
-![Diagram B — single chat server internal](./highleveldesign.png)
+![Diagram B — system context](./highleveldesign.png)
 
 ---
 
