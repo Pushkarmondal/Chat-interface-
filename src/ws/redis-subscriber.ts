@@ -1,10 +1,9 @@
 import type Redis from "ioredis";
-import {
-  parseRedisChatPayload,
-  type RedisChatPayload,
-} from "@/services/redis-chat-event.publisher";
+import { parseRedisChatPayload } from "@/services/redis-chat-event.publisher";
 import { logger } from "@/lib/logger";
 import type { SessionRegistry } from "@/ws/session-registry";
+import { dispatchRedisPayloadToLocalRooms } from "@/ws/redis-payload-dispatch";
+
 /**
  * Subscribes to `chat:*` once per process. Parsing failures are logged — never swallowed silently.
  */
@@ -26,38 +25,8 @@ export class RedisChatSubscriber {
       if (parsed.chatId !== expectedChatId) {
         logger.warn("Channel/chatId mismatch", { channel, chatId: parsed.chatId });
       }
-      this.dispatchToLocalSockets(parsed);
+      dispatchRedisPayloadToLocalRooms(this.registry, parsed);
     });
-  }
-
-  private dispatchToLocalSockets(payload: RedisChatPayload): void {
-    switch (payload.kind) {
-      case "message_new":
-        this.registry.broadcastToChatIncludeSender(payload.chatId, {
-          type: "message",
-          message: payload.message,
-        });
-        break;
-      case "typing":
-        this.registry.broadcastToChatIncludeSender(payload.chatId, {
-          type: "typing",
-          chatId: payload.chatId,
-          userId: payload.userId,
-          active: payload.active,
-        });
-        break;
-      case "messages_read":
-        this.registry.broadcastToChatIncludeSender(payload.chatId, {
-          type: "messages_read",
-          chatId: payload.chatId,
-          userId: payload.userId,
-          messageIds: payload.messageIds,
-          readAt: payload.readAt,
-        });
-        break;
-      default:
-        break;
-    }
   }
 
   async stop(): Promise<void> {

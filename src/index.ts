@@ -17,6 +17,8 @@ import { RedisChatEventPublisher } from "@/services/redis-chat-event.publisher";
 import { ChatGateway } from "@/ws/chat-gateway";
 import { SessionRegistry } from "@/ws/session-registry";
 import { RedisChatSubscriber } from "@/ws/redis-subscriber";
+import { dispatchRedisPayloadToLocalRooms } from "@/ws/redis-payload-dispatch";
+import type { RedisChatPayload } from "@/services/redis-chat-event.publisher";
 
 /**
  * Composition root: wires data + domain + transport. In larger deployments this
@@ -25,12 +27,15 @@ import { RedisChatSubscriber } from "@/ws/redis-subscriber";
 function buildApp() {
   const { publisher, subscriber } = createPubSubConnections();
   const registry = new SessionRegistry();
+  const localFanout = {
+    broadcast: (payload: RedisChatPayload) => dispatchRedisPayloadToLocalRooms(registry, payload),
+  };
   const chatMembers = new ChatMemberRepository();
   const messagesRepo = new MessageRepository();
   const permissions = new ChatPermissionService(chatMembers);
   const bus = new RedisChatEventPublisher(publisher);
-  const messageService = new MessageService(messagesRepo, permissions, bus);
-  const typingService = new TypingService(permissions, bus);
+  const messageService = new MessageService(messagesRepo, permissions, bus, localFanout);
+  const typingService = new TypingService(permissions, bus, localFanout);
   const presenceService = new PresenceService();
   const mediaService = new MediaService();
   const commands = new ChatCommandService(

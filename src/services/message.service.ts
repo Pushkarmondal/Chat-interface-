@@ -3,8 +3,13 @@ import type { MessageType } from "../../generated/prisma/client";
 import { AppError } from "../lib/errors";
 import { MessageRepository } from "../data/repositories/message.repository";
 import { ChatPermissionService } from "../services/chat-permission.service";
-import type { RedisChatEventPublisher } from "../services/redis-chat-event.publisher";
+import type {
+  RedisChatEventPublisher,
+  RedisChatPayload,
+} from "../services/redis-chat-event.publisher";
+import type { LocalRoomFanout } from "../services/local-room-fanout";
 import type { MessageDTO } from "../types/domain";
+import { logger } from "../lib/logger";
 import { InputJsonValue, JsonValue } from "../../generated/prisma/internal/prismaNamespace";
 
 function isHttpUrl(s: string): boolean {
@@ -64,8 +69,22 @@ export class MessageService {
   constructor(
     private readonly messages: MessageRepository,
     private readonly permissions: ChatPermissionService,
-    private readonly bus: RedisChatEventPublisher
+    private readonly bus: RedisChatEventPublisher,
+    private readonly localFanout?: LocalRoomFanout
   ) {}
+
+  private async publishOrDegradeLocal(payload: RedisChatPayload): Promise<void> {
+    try {
+      await this.bus.publish(payload);
+    } catch (e) {
+      logger.warn("Redis publish failed; degrading to local room broadcast only", {
+        kind: payload.kind,
+        chatId: payload.chatId,
+        err: String(e),
+      });
+      this.localFanout?.broadcast(payload);
+    }
+  }
 
   async sendMessage(input: SendMessageInput): Promise<{ message: MessageDTO; deduplicated: boolean }> {
     await this.permissions.requireCanWrite(input.chatId, input.senderId);
@@ -89,7 +108,7 @@ export class MessageService {
         clientGeneratedId: input.clientGeneratedId,
       });
       const dto = toDto(created);
-      await this.bus.publish({
+      await this.publishOrDegradeLocal({
         v: 1,
         kind: "message_new",
         chatId: input.chatId,
@@ -120,13 +139,13 @@ export class MessageService {
     }
     await this.messages.createManyReadReceipts(input.messageIds, input.userId);
     const readAt = new Date().toISOString();
-    await this.bus.publish({
+    await this.publishOrDegradeLocal({
       v: 1,
       kind: "messages_read",
       chatId: input.chatId,
       userId: input.userId,
       messageIds: input.messageIds,
-      readAt, 
+      readAt,
     });
     return { readAt, messageIds: input.messageIds };
   }

@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: flow_chat_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: flow_chat_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flow_chat_app
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/chat?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: docker-compose-dev-jwt-secret-min-32-characters-long
+      PORT: "8080"
+      NODE_ENV: development
+      MOCK_S3_BUCKET_BASE_URL: https://mock-cdn.example.com/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
