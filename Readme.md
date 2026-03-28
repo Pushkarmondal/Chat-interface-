@@ -1,8 +1,14 @@
 # Flow Chat Backend
-
 > **TL;DR** — Real-time chat over WebSockets (Bun + TypeScript). Messages persist to **PostgreSQL**, fan out via **Redis Pub/Sub** across horizontally-scalable nodes. JWT auth with three roles. Supports typing indicators, presence heartbeats, idempotent sends, and read receipts.
 
 ---
+
+| Question | Answer |
+|----------|--------|
+| **What are you using for WebSockets?** | Node’s `http` server + the **`ws`** package (`WebSocketServer`, per-connection handlers). Auth on upgrade (JWT query or `Authorization: Bearer`). JSON frames routed through a thin gateway into services. |
+| **Other message types (audio, documents, …)?** | `MessageType` enum: `TEXT`, `IMAGE`, `AUDIO`, `FILE`. **No binary over WS:** clients get a mock pre-signed upload (`request_presigned_upload` + `MediaService`), upload to object storage, then `send_message` with `content` = public URL and matching type. `FILE` covers documents; MIME rules live in `MediaService`. |
+| **How do we know someone is typing?** | Clients send `typing_start` / `typing_stop`. Server sets Redis keys `typing:{chatId}:{userId}` with TTL, publishes on Redis Pub/Sub, other nodes broadcast `typing` events to joined room members. READ-only members cannot start/stop typing (enforced with send). |
+| **Admin vs Read vs Write?** | `chat_members.role` = `ADMIN` \| `WRITE` \| `READ` (Postgres). `ChatPermissionService`: READ cannot send / type / presigned upload; WRITE can send; ADMIN full control + `requireAdmin` hook for stricter ops. Checked before business logic runs. |
 
 ## Message flow
 

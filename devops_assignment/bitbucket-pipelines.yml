@@ -1,0 +1,58 @@
+image: atlassian/default-image:4   # Ubuntu-based, has git, curl, openssh
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: "Deploy to EC2"
+          deployment: production
+
+          script:
+            # 1. Prepare the SSH key from the repository secret
+            - mkdir -p ~/.ssh
+            - echo "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+            - chmod 600 ~/.ssh/deploy_key
+
+            # 2. Trust the host fingerprint without an interactive prompt
+            #    (avoids "Host key verification failed" in CI)
+            - ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+            # 3. SSH into the EC2 instance and run the deployment sequence
+            - |
+              ssh -i ~/.ssh/deploy_key \
+                  -o StrictHostKeyChecking=yes \
+                  "$EC2_USER@$EC2_HOST" << 'REMOTE'
+
+                set -euo pipefail
+
+                APP_DIR="/opt/node_dummy_app"
+                APP_NAME="node_dummy_app"
+
+                echo "── Pulling latest main branch ──"
+                cd "$APP_DIR"
+                git fetch origin main
+                git reset --hard origin/main
+
+                echo "── Installing dependencies ──"
+                npm install --production
+
+                echo "── Restarting app gracefully with PM2 ──"
+                # 'reload' performs a graceful restart (zero-downtime when using
+                # Node.js cluster mode). Falls back to start if not running yet.
+                pm2 reload "$APP_NAME" --update-env || pm2 start ecosystem.config.js
+
+                echo "── Confirming app is alive ──"
+                sleep 3
+                pm2 list | grep "$APP_NAME"
+                curl -sf http://localhost:3000/mongo \
+                  && echo "✅ /mongo health check passed" \
+                  || echo "⚠️  /mongo check failed — inspect pm2 logs"
+
+              REMOTE
+
+            # 4. Clean up the key from the pipeline runner's filesystem
+            - rm -f ~/.ssh/deploy_key
+
+          after-script:
+            # Runs even on failure — ensures key is always removed
+            - rm -f ~/.ssh/deploy_key || true
