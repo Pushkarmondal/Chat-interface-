@@ -1,4 +1,4 @@
-import type { GroupRole, MessageType } from "@prisma/client";
+import { GroupRole, MessageType } from "../../generated/prisma/client";
 
 export type { GroupRole, MessageType };
 

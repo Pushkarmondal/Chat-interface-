@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MessageType } from "@prisma/client";
+import { MessageType } from "../../generated/prisma/client";
 
 /**
  * Inbound client events — validated in the transport layer, then passed to services.
@@ -77,8 +77,8 @@ export type ServerEvent =
   | { type: "connected"; userId: string }
   | { type: "joined_chat"; chatId: string }
   | { type: "left_chat"; chatId: string }
-  | { type: "error"; error: import("@/lib/errors").SerializedAppError }
-  | { type: "message"; message: import("@/types/domain").MessageDTO }
+  | { type: "error"; error: import("../lib/errors").SerializedAppError }
+  | { type: "message"; message: import("../types/domain").MessageDTO }
   | {
       type: "message_delivered";
       chatId: string;

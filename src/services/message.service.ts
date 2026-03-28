@@ -1,10 +1,11 @@
-import { Prisma } from "@prisma/client";
-import type { MessageType } from "@prisma/client";
-import { AppError } from "@/lib/errors";
-import { MessageRepository } from "@/data/repositories/message.repository";
-import { ChatPermissionService } from "@/services/chat-permission.service";
-import type { RedisChatEventPublisher } from "@/services/redis-chat-event.publisher";
-import type { MessageDTO } from "@/types/domain";
+import { PrismaClientKnownRequestError } from "../../generated/prisma/internal/prismaNamespace";
+import type { MessageType } from "../../generated/prisma/client";
+import { AppError } from "../lib/errors";
+import { MessageRepository } from "../data/repositories/message.repository";
+import { ChatPermissionService } from "../services/chat-permission.service";
+import type { RedisChatEventPublisher } from "../services/redis-chat-event.publisher";
+import type { MessageDTO } from "../types/domain";
+import { InputJsonValue, JsonValue } from "../../generated/prisma/internal/prismaNamespace";
 
 function isHttpUrl(s: string): boolean {
   try {
@@ -30,7 +31,7 @@ function toDto(row: {
   senderId: string;
   type: MessageType;
   content: string;
-  metadata: Prisma.JsonValue;
+  metadata: JsonValue | null;
   clientGeneratedId: string | null;
   createdAt: Date;
 }): MessageDTO {
@@ -84,7 +85,7 @@ export class MessageService {
         senderId: input.senderId,
         type: input.messageType,
         content: input.content,
-        metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
+        metadata: input.metadata as InputJsonValue,
         clientGeneratedId: input.clientGeneratedId,
       });
       const dto = toDto(created);
@@ -96,7 +97,7 @@ export class MessageService {
       });
       return { message: dto, deduplicated: false };
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      if (e instanceof PrismaClientKnownRequestError && e.code === "P2002") {
         const again = await this.messages.findByClientGeneratedId(
           input.chatId,
           input.clientGeneratedId
@@ -125,7 +126,7 @@ export class MessageService {
       chatId: input.chatId,
       userId: input.userId,
       messageIds: input.messageIds,
-      readAt,
+      readAt, 
     });
     return { readAt, messageIds: input.messageIds };
   }

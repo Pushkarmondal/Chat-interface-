@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
-import { MessageType } from "@prisma/client";
-import { getEnv } from "@/config/env";
-import { AppError } from "@/lib/errors";
-import type { PresignedUploadResult } from "@/types/domain";
+import { MessageType } from "../../generated/prisma/client";
+import { getEnv } from "../config/env";
+import { AppError } from "../lib/errors";
+import type { PresignedUploadResult } from "../types/domain";
 
 const ALLOWED_MIME_BY_TYPE: Record<MessageType, RegExp[]> = {
   TEXT: [],
